@@ -15,6 +15,14 @@ export default function StudentDashboard({ user, token }) {
     const [selectedTask, setSelectedTask] = useState('');
     const [taskFile, setTaskFile] = useState(null);
 
+    // Logbook State
+    const [logbooks, setLogbooks] = useState([]);
+    const [logbookContent, setLogbookContent] = useState('');
+
+    // Complaint State
+    const [complaints, setComplaints] = useState([]);
+    const [complaintContent, setComplaintContent] = useState('');
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -26,8 +34,41 @@ export default function StudentDashboard({ user, token }) {
 
             const resTasks = await api.get('/api/tasks/me');
             setTasks(resTasks.data);
+
+            const resComp = await api.get('/api/complaints');
+            setComplaints(resComp.data);
+
+            const resLog = await api.get('/api/logbook');
+            setLogbooks(resLog.data);
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    const handleComplaintSubmit = async (e) => {
+        e.preventDefault();
+        if (!complaintContent) return alert('Please write your feedback');
+
+        try {
+            await api.post('/api/complaints', { content: complaintContent });
+            alert('Feedback submitted successfully! Our Intelligent Sentiment Engine has notified the coordinator.');
+            setComplaintContent('');
+            fetchData();
+        } catch (err) {
+            alert(err.response?.data?.message || 'Submission failed');
+        }
+    };
+
+    const handleLogbookSubmit = async (e) => {
+        e.preventDefault();
+        if (!logbookContent) return alert('Please write logbook content');
+        try {
+            await api.post('/api/logbook', { content: logbookContent });
+            alert('Daily logbook entry saved!');
+            setLogbookContent('');
+            fetchData();
+        } catch (err) {
+            alert(err.response?.data?.message || 'Submission failed');
         }
     };
 
@@ -89,7 +130,17 @@ export default function StudentDashboard({ user, token }) {
                     </div>
                     <button type="submit" className="btn-primary">Submit Profile</button>
                 </form>
-                {cvStatus && <p style={{ color: 'var(--success)', marginTop: '10px', fontSize: '0.9rem' }}>{cvStatus}</p>}
+                {user.cvUrl ? (
+                    <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>CV ACTIVE:</span>
+                            <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>Your profile is visible to recruiters.</span>
+                        </div>
+                        <a href={`http://localhost:5000${user.cvUrl}`} target="_blank" rel="noreferrer" className="text-primary" style={{ fontSize: '0.9rem' }}>Download My CV</a>
+                    </div>
+                ) : (
+                    cvStatus && <p style={{ color: 'var(--success)', marginTop: '10px', fontSize: '0.9rem' }}>{cvStatus}</p>
+                )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
@@ -154,6 +205,90 @@ export default function StudentDashboard({ user, token }) {
                     )}
                 </div>
 
+            </div>
+
+            {/* Daily Logbook Section */}
+            <div className="glass-card" style={{ marginTop: '24px' }}>
+                <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock size={20} className="text-primary" /> Daily Internship Logbook
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px' }}>
+                    Record your daily activities and achievements. This log is visible to your Industry and University Supervisors.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    <form onSubmit={handleLogbookSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <textarea 
+                            className="input-field" 
+                            rows="4" 
+                            placeholder="What did you do today?" 
+                            value={logbookContent}
+                            onChange={e => setLogbookContent(e.target.value)}
+                            required
+                        ></textarea>
+                        <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>Save Entry</button>
+                    </form>
+                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                        <h4 style={{ marginBottom: '12px' }}>Recent Entries</h4>
+                        {logbooks.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No logbook entries yet.</p> : (
+                            logbooks.map(l => (
+                                <div key={l._id} style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', marginBottom: '8px', borderLeft: '3px solid var(--primary-color)' }}>
+                                    <p style={{ fontSize: '0.85rem', marginBottom: '4px' }}>{l.content}</p>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(l.date).toLocaleString()}</span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Feedback & Complaints Section */}
+            <div className="glass-card" style={{ marginTop: '24px' }}>
+                <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Briefcase size={20} className="text-warning" /> Feedback & Complaints (Intelligent Monitoring)
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px' }}>
+                    Submit any concerns regarding your attachment or supervision. Our system uses Sentiment Analysis to prioritize negative experiences for coordinator intervention.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    <form onSubmit={handleComplaintSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <textarea 
+                            className="input-field" 
+                            rows="4" 
+                            placeholder="Describe your experience or complaint..." 
+                            value={complaintContent}
+                            onChange={e => setComplaintContent(e.target.value)}
+                            required
+                        ></textarea>
+                        <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>Submit Feedback</button>
+                    </form>
+                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                        <h4>My Previous Submissions</h4>
+                        {complaints.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No submissions yet.</p> : (
+                            complaints.map(c => (
+                                <div key={c._id} style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', marginBottom: '8px', borderLeft: `4px solid ${c.status === 'resolved' ? 'var(--success)' : 'var(--warning)'}` }}>
+                                    <p style={{ fontSize: '0.85rem', marginBottom: '4px' }}>{c.content}</p>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(c.createdAt).toLocaleDateString()}</span>
+                                        <span style={{ 
+                                            fontSize: '0.7rem', 
+                                            padding: '2px 6px', 
+                                            borderRadius: '4px', 
+                                            background: c.status === 'resolved' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                            color: c.status === 'resolved' ? 'var(--success)' : 'var(--warning)'
+                                        }}>
+                                            {c.status.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    {c.coordinatorComments && (
+                                        <p style={{ fontSize: '0.8rem', color: 'var(--primary-color)', marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '4px' }}>
+                                            <strong>Response:</strong> {c.coordinatorComments}
+                                        </p>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

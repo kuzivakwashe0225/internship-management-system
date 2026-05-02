@@ -101,3 +101,87 @@ exports.approvePlacement = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+// For Coordinator: Manually place a student into a company
+exports.coordinatorPlaceStudent = async (req, res) => {
+    try {
+        const { studentId, companyId, universitySupervisorId } = req.body;
+
+        const student = await User.findById(studentId);
+        if (!student) return res.status(400).json({ message: 'Student not found' });
+        if (!student.cvUrl) return res.status(400).json({ message: 'Student has not uploaded a CV yet. Students must submit a CV before being placed.' });
+
+        const company = await User.findById(companyId);
+        if (!company || company.role !== 'supervisor') return res.status(400).json({ message: 'Invalid company selected' });
+
+        const internship = await Internship.create({
+            student: studentId,
+            industrySupervisor: companyId,
+            company: company.company,
+            universitySupervisor: universitySupervisorId,
+            startDate: new Date(),
+            status: 'active'
+        });
+
+        // Mark student as employed
+        await User.findByIdAndUpdate(studentId, { isEmployed: true });
+
+        res.status(201).json(internship);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// For Coordinator: See all students and their CV status
+exports.getAllStudentsForCoordinator = async (req, res) => {
+    try {
+        const students = await User.find({ role: 'student' }).select('-password');
+        res.json(students);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.getUniversitySupervisors = async (req, res) => {
+    try {
+        const supervisors = await User.find({ role: 'university_supervisor' }).select('-password');
+        res.json(supervisors);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Smart suggestion: Find best-fit university supervisors for a student
+exports.suggestUniversitySupervisor = async (req, res) => {
+    try {
+        const { internshipId } = req.query;
+
+        const internship = await Internship.findById(internshipId).populate('student');
+        if (!internship) return res.status(400).json({ message: 'Internship not found' });
+
+        const student = internship.student;
+
+        // Find supervisors in the same department
+        const supervisors = await User.find({
+            role: 'university_supervisor',
+            department: student.department
+        }).select('_id name department email');
+
+        // For each, count their active students
+        const suggestions = await Promise.all(
+            supervisors.map(async (sup) => {
+                const count = await Internship.countDocuments({
+                    universitySupervisor: sup._id,
+                    status: 'active'
+                });
+                return { ...sup.toObject(), activeStudentCount: count };
+            })
+        );
+
+        // Sort by load (ascending) — lowest load first
+        suggestions.sort((a, b) => a.activeStudentCount - b.activeStudentCount);
+
+        res.json(suggestions);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

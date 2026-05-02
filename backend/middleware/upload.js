@@ -18,7 +18,7 @@ const taskStorage = multer.diskStorage({
         cb(null, 'uploads/tasks/')
     },
     filename: function (req, file, cb) {
-        cb(null, req.user._id + '-' + req.params.taskId + '-' + Date.now() + path.extname(file.originalname))
+        cb(null, req.user._id + '-' + req.params.id + '-' + Date.now() + path.extname(file.originalname))
     }
 });
 exports.uploadTaskFile = multer({ storage: taskStorage, limits: { fileSize: 10000000 } }); // 10MB limit

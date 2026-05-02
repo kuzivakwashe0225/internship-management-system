@@ -5,6 +5,9 @@ import { BookOpen, CheckSquare, Download } from 'lucide-react';
 export default function UniversitySupervisorDashboard({ user, token }) {
     const [internships, setInternships] = useState([]);
     const [tasks, setTasks] = useState([]);
+    const [complaints, setComplaints] = useState([]);
+    const [logbooks, setLogbooks] = useState([]);
+    const [industryFeedback, setIndustryFeedback] = useState([]);
 
     // Task Assignment Form
     const [taskForm, setTaskForm] = useState({ title: '', description: '', deadline: '', studentId: '' });
@@ -22,6 +25,17 @@ export default function UniversitySupervisorDashboard({ user, token }) {
             // Tasks assigned by this Univ Supervisor
             const resTasks = await api.get('/api/tasks/assigned');
             setTasks(resTasks.data);
+
+            // Complaints from assigned students
+            const resComp = await api.get('/api/complaints');
+            setComplaints(resComp.data);
+
+            // Industry feedback for assigned students
+            const resIndustryFeedback = await api.get('/api/industry-feedback');
+            setIndustryFeedback(resIndustryFeedback.data);
+
+            const resLog = await api.get('/api/logbook');
+            setLogbooks(resLog.data);
         } catch (err) {
             console.error(err);
         }
@@ -159,6 +173,114 @@ export default function UniversitySupervisorDashboard({ user, token }) {
 
                 </div>
 
+            </div>
+
+            {/* Student Feedback & Sentiment Monitoring */}
+            <div className="glass-card" style={{ marginTop: '24px' }}>
+                <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BookOpen size={20} className="text-warning" /> Student Feedback & Sentiment Monitoring
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                    Monitor the emotional well-being of your students. Negative feedback is automatically highlighted by our Intelligent Sentiment Engine.
+                </p>
+
+                {complaints.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No feedback submitted by your students yet.</p> : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                        {complaints.map(c => {
+                            const isNegative = c.sentimentScore < 0;
+                            return (
+                                <div key={c._id} style={{ 
+                                    padding: '12px', 
+                                    background: isNegative ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255,255,255,0.02)', 
+                                    borderRadius: '8px',
+                                    borderLeft: `4px solid ${isNegative ? 'var(--danger)' : 'var(--success)'}`
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <strong>{c.student?.name}</strong>
+                                        <span style={{ fontSize: '0.7rem', color: isNegative ? 'var(--danger)' : 'var(--success)' }}>
+                                            {isNegative ? 'NEGATIVE SENTIMENT' : 'POSITIVE/NEUTRAL'}
+                                        </span>
+                                    </div>
+                                    <p style={{ fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>"{c.content}"</p>
+                                    <div style={{ marginTop: '8px', fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Status: {c.status.toUpperCase()}</span>
+                                        <span>{new Date(c.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* Logbook Monitoring */}
+            <div className="glass-card" style={{ marginTop: '24px' }}>
+                <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BookOpen size={20} className="text-primary" /> Daily Logbook Monitoring
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                    {logbooks.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No logbook entries from interns yet.</p> : (
+                        logbooks.map(l => (
+                            <div key={l._id} style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderLeft: '3px solid var(--primary-color)', borderRadius: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <strong>{l.student?.name}</strong>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(l.date).toLocaleDateString()}</span>
+                                </div>
+                                <p style={{ fontSize: '0.85rem' }}>{l.content}</p>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+
+            {/* Industry Supervisor Performance Feedback */}
+            <div className="glass-card" style={{ marginTop: '24px' }}>
+                <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BookOpen size={20} className="text-primary" /> Industry Supervisor Feedback on Your Students
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                    Sentiment-analyzed feedback from industry supervisors about your assigned students' performance. Use this to identify students who may need additional support.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                    {industryFeedback.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No industry feedback submitted yet.</p> : (
+                        industryFeedback.map(fb => {
+                            const isNegative = fb.sentimentScore < 0;
+                            const isPositive = fb.sentimentScore > 0;
+                            return (
+                                <div key={fb._id} style={{
+                                    padding: '12px',
+                                    background: isNegative ? 'rgba(239, 68, 68, 0.05)' : isPositive ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.02)',
+                                    border: isNegative ? '1px solid rgba(239, 68, 68, 0.2)' : isPositive ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--border-light)',
+                                    borderRadius: '8px',
+                                    borderLeft: `4px solid ${isNegative ? 'var(--danger)' : isPositive ? 'var(--success)' : 'var(--warning)'}`
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                        <strong>{fb.student?.name}</strong>
+                                        <span style={{
+                                            fontSize: '0.65rem',
+                                            padding: '2px 6px',
+                                            borderRadius: '3px',
+                                            background: isNegative ? 'rgba(239, 68, 68, 0.2)' : isPositive ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                                            color: isNegative ? 'var(--danger)' : isPositive ? 'var(--success)' : 'var(--warning)',
+                                            fontWeight: 'bold'
+                                        }}>
+                                            {isPositive ? '😊 POSITIVE' : isNegative ? '😞 NEGATIVE' : '😐 NEUTRAL'} ({fb.sentimentScore})
+                                        </span>
+                                    </div>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                                        {fb.supervisor?.company}
+                                    </p>
+                                    <p style={{ fontSize: '0.85rem', fontStyle: 'italic', marginBottom: '8px' }}>
+                                        "{fb.description}"
+                                    </p>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                        {new Date(fb.createdAt).toLocaleDateString()}
+                                    </span>
+                                </div>
+                            )
+                        })
+                    )}
+                </div>
             </div>
         </div>
     );

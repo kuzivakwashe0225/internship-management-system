@@ -1,8 +1,27 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('./models/User');
 
-mongoose.connect('mongodb://127.0.0.1:27017/intrahub').then(async () => {
-    await User.updateMany({}, { isVerified: true, verificationToken: undefined });
-    console.log('All Users verified');
-    process.exit(0);
-}).catch(console.error);
+async function verifyAll() {
+    try {
+        await mongoose.connect(process.env.MONGODB_URI);
+        console.log('Connected to MongoDB');
+
+        const result = await User.updateMany(
+            { isVerified: false },
+            { 
+                isVerified: true, 
+                otpCode: undefined, 
+                otpExpires: undefined 
+            }
+        );
+
+        console.log(`Successfully verified ${result.modifiedCount} users.`);
+        process.exit(0);
+    } catch (error) {
+        console.error('Error:', error);
+        process.exit(1);
+    }
+}
+
+verifyAll();

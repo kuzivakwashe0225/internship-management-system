@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Home, FileText, Briefcase } from 'lucide-react';
+import api from '../api';
 
 // Import our new advanced Role components
 import StudentDashboard from '../components/StudentDashboard';
@@ -21,8 +22,18 @@ export default function Dashboard() {
             navigate('/login');
             return;
         }
-        setUser(JSON.parse(userData));
-        setLoading(false);
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+
+        // Fetch fresh user data from API to ensure any coordinator-side changes (approval, department allocation) are reflected
+        api.get('/api/auth/me')
+            .then(res => {
+                const updatedUser = { ...parsedUser, ...res.data };
+                localStorage.setItem('intrahub_user', JSON.stringify(updatedUser));
+                setUser(updatedUser);
+            })
+            .catch(err => console.error('Failed to refresh user data:', err))
+            .finally(() => setLoading(false));
     }, []);
 
     const handleLogout = () => {

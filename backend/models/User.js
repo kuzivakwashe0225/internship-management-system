@@ -13,7 +13,8 @@ const userSchema = new mongoose.Schema({
 
     // Verification & Auth
     isVerified: { type: Boolean, default: false },
-    verificationToken: { type: String },
+    otpCode: { type: String },
+    otpExpires: { type: Date },
 
     // --- Student Specific Fields ---
     studentId: { type: String },

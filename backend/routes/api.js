@@ -1,9 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const { register, login, getMe, verifyEmail } = require('../controllers/authController');
-const { uploadStudentCV, getAvailableCandidates, selectCandidate, getInternships, approvePlacement } = require('../controllers/internshipController');
+const {
+    uploadStudentCV, getAvailableCandidates, selectCandidate,
+    getInternships, approvePlacement, coordinatorPlaceStudent,
+    getAllStudentsForCoordinator, getUniversitySupervisors, suggestUniversitySupervisor
+} = require('../controllers/internshipController');
 const { createEvaluation, getEvaluations } = require('../controllers/evaluationController');
 const { createTask, getMyTasks, getAssignedTasks, submitTask, gradeTask } = require('../controllers/taskController');
+const { createComplaint, getComplaints, resolveComplaint } = require('../controllers/complaintController');
+const { createIndustryFeedback, getIndustryFeedback } = require('../controllers/industryFeedbackController');
+const { createLogbookEntry, getLogbookEntries } = require('../controllers/logbookController');
 const { protect, authorize } = require('../middleware/auth');
 const { uploadCV, uploadTaskFile } = require('../middleware/upload');
 const User = require('../models/User');
@@ -12,7 +19,7 @@ const User = require('../models/User');
 router.post('/auth/register', register);
 router.post('/auth/login', login);
 router.get('/auth/me', protect, getMe);
-router.get('/auth/verify', verifyEmail);
+router.post('/auth/verify', verifyEmail);
 
 // --- DASHBOARD/USERS ---
 // Coordinators reviewing and approving Companies
@@ -37,6 +44,10 @@ router.post('/internships/select', protect, authorize('supervisor'), selectCandi
 router.get('/internships', protect, getInternships);
 // Coordinator finalizes placement, linking a Univ Supervisor
 router.put('/internships/:id/approve', protect, authorize('coordinator'), approvePlacement);
+router.post('/internships/coordinator-place', protect, authorize('coordinator'), coordinatorPlaceStudent);
+router.get('/internships/:id/suggest-supervisor', protect, authorize('coordinator'), suggestUniversitySupervisor);
+router.get('/students', protect, authorize('coordinator'), getAllStudentsForCoordinator);
+router.get('/supervisors/university', protect, authorize('coordinator'), getUniversitySupervisors);
 
 // --- TASKS (e.g., HIT-300) ---
 router.post('/tasks', protect, authorize('university_supervisor', 'coordinator'), createTask);
@@ -48,5 +59,18 @@ router.put('/tasks/:id/grade', protect, authorize('university_supervisor', 'coor
 // --- EVALUATIONS ---
 router.post('/evaluations', protect, authorize('supervisor'), createEvaluation);
 router.get('/evaluations', protect, authorize('coordinator', 'supervisor', 'university_supervisor'), getEvaluations);
+
+// --- COMPLAINTS & FEEDBACK ---
+router.post('/complaints', protect, authorize('student'), createComplaint);
+router.get('/complaints', protect, getComplaints);
+router.put('/complaints/:id/resolve', protect, authorize('coordinator'), resolveComplaint);
+
+// --- INDUSTRY FEEDBACK ---
+router.post('/industry-feedback', protect, authorize('supervisor'), createIndustryFeedback);
+router.get('/industry-feedback', protect, getIndustryFeedback);
+
+// --- LOGBOOK ---
+router.post('/logbook', protect, authorize('student'), createLogbookEntry);
+router.get('/logbook', protect, getLogbookEntries);
 
 module.exports = router;

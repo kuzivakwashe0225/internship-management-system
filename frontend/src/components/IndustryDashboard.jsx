@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Users, FileText, CheckCircle, Mail } from 'lucide-react';
+import { Users, FileText, CheckCircle, Mail, Clock } from 'lucide-react';
 
 export default function IndustryDashboard({ user, token }) {
     const [candidates, setCandidates] = useState([]);
     const [internships, setInternships] = useState([]);
     const [evalForm, setEvalForm] = useState({ internshipId: '', quantitativeGrade: 0, qualitativeFeedback: '' });
+    const [studentFeedback, setStudentFeedback] = useState({}); // { studentId: 'feedback text' }
+    const [logbooks, setLogbooks] = useState([]);
 
     useEffect(() => {
         fetchData();
@@ -21,6 +23,9 @@ export default function IndustryDashboard({ user, token }) {
 
             const resIn = await api.get('/api/internships');
             setInternships(resIn.data);
+
+            const resLog = await api.get('/api/logbook');
+            setLogbooks(resLog.data);
         } catch (err) {
             console.error(err);
         }
@@ -50,6 +55,20 @@ export default function IndustryDashboard({ user, token }) {
             fetchData();
         } catch (err) {
             alert('Failed: ' + err.response?.data?.message);
+        }
+    };
+
+    const handleIndustryFeedback = async (studentId) => {
+        const description = studentFeedback[studentId];
+        if (!description) return alert('Please enter feedback first');
+
+        try {
+            await api.post('/api/industry-feedback', { studentId, description });
+            alert('Feedback posted successfully with intelligent sentiment analysis!');
+            setStudentFeedback({ ...studentFeedback, [studentId]: '' });
+            fetchData();
+        } catch (err) {
+            alert('Failed to post feedback: ' + err.response?.data?.message);
         }
     };
 
@@ -106,14 +125,37 @@ export default function IndustryDashboard({ user, token }) {
 
                 {/* Active Employed Students */}
                 <div className="glass-card">
-                    <h3 style={{ marginBottom: '16px' }}>Employed Interns</h3>
+                    <h3 style={{ marginBottom: '16px' }}>Employed Interns & Performance Feedback</h3>
                     {activeEmployed.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No active interns.</p> : (
-                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                             {activeEmployed.map(i => (
-                                <div key={i._id} style={{ padding: '12px', background: 'rgba(16, 185, 129, 0.1)', borderLeft: '4px solid var(--success)', borderRadius: '4px', marginBottom: '8px' }}>
-                                    <strong>{i.student?.name}</strong> <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>ACTIVE</span>
-                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{i.student?.email}</p>
-                                    <code style={{ fontSize: '0.75rem', color: 'var(--primary-color)', marginTop: '4px', display: 'block' }}>ID: {i._id}</code>
+                                <div key={i._id} style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', borderLeft: '4px solid var(--success)', borderRadius: '8px', marginBottom: '16px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <strong>{i.student?.name}</strong>
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--success)' }}>ACTIVE</span>
+                                    </div>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--primary-color)', marginBottom: '8px' }}>
+                                        <strong>Internship ID:</strong> {i._id}
+                                    </p>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>{i.student?.email} | Dept: {i.student?.department}</p>
+                                    
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <input 
+                                            type="text" 
+                                            className="input-field" 
+                                            placeholder="Write performance feedback..." 
+                                            style={{ fontSize: '0.8rem', padding: '8px' }}
+                                            value={studentFeedback[i.student?._id] || ''}
+                                            onChange={e => setStudentFeedback({ ...studentFeedback, [i.student?._id]: e.target.value })}
+                                        />
+                                        <button 
+                                            onClick={() => handleIndustryFeedback(i.student?._id)}
+                                            className="btn-primary" 
+                                            style={{ padding: '8px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                                        >
+                                            Post Feedback
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -152,6 +194,26 @@ export default function IndustryDashboard({ user, token }) {
                         </div>
                         <button type="submit" className="btn-primary">Submit Evaluation</button>
                     </form>
+                </div>
+
+                {/* Logbook Monitoring */}
+                <div className="glass-card" style={{ marginTop: '24px', gridColumn: 'span 2' }}>
+                    <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Clock size={20} className="text-primary" /> Daily Logbook Monitoring
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                        {logbooks.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No logbook entries from interns yet.</p> : (
+                            logbooks.map(l => (
+                                <div key={l._id} style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderLeft: '3px solid var(--primary-color)', borderRadius: '8px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <strong>{l.student?.name}</strong>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(l.date).toLocaleDateString()}</span>
+                                    </div>
+                                    <p style={{ fontSize: '0.85rem' }}>{l.content}</p>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
 
             </div>

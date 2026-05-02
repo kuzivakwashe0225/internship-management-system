@@ -11,10 +11,17 @@ export default function Register() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+
+        if (formData.password.length < 8) {
+            setError('Password must be at least 8 characters long');
+            return;
+        }
+
         try {
             const res = await api.post('/api/auth/register', formData);
-            setSuccessMsg(res.data.message || 'Registration successful. Please check your email to verify your account.');
-            setFormData({ name: '', email: '', password: '', role: 'student', studentId: '', department: '', company: '' });
+            setSuccessMsg(res.data.message || 'Registration successful');
+            setTimeout(() => navigate('/login'), 2000);
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed');
         }
@@ -29,8 +36,8 @@ export default function Register() {
                 {successMsg ? (
                     <div style={{ textAlign: 'center', padding: '20px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--success)', borderRadius: '8px' }}>
                         <h3 style={{ color: 'var(--success)', marginBottom: '12px' }}>Success!</h3>
-                        <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>{successMsg}</p>
-                        <button type="button" onClick={() => navigate('/login')} className="btn-primary" style={{ width: '100%' }}>Proceed to Login</button>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '12px' }}>{successMsg}</p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Redirecting to login...</p>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit}>

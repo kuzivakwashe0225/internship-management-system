@@ -6,6 +6,8 @@ export default function Records({ user }) {
     const [internships, setInternships] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [evaluations, setEvaluations] = useState([]);
+    const [industryFeedback, setIndustryFeedback] = useState([]);
+    const [logbooks, setLogbooks] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -46,6 +48,17 @@ export default function Records({ user }) {
                     setEvaluations(Array.isArray(resEvals.data) ? resEvals.data : []);
                 } catch (e) { }
             }
+
+            try {
+                const resIndFeed = await api.get('/api/industry-feedback');
+                setIndustryFeedback(Array.isArray(resIndFeed.data) ? resIndFeed.data : []);
+            } catch (e) { }
+
+            // Fetch Logbooks
+            try {
+                const resLog = await api.get('/api/logbook');
+                setLogbooks(Array.isArray(resLog.data) ? resLog.data : []);
+            } catch (e) { }
         } catch (error) {
             console.error('Error fetching records:', error);
         } finally {
@@ -140,6 +153,56 @@ export default function Records({ user }) {
                                         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
                                             Evaluator: {evalRecord.supervisor?.name || 'Industry Supervisor'}
                                         </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Industry Feedback List */}
+                    {industryFeedback.length > 0 && (
+                        <div className="glass-card">
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: 'var(--primary-color)' }}>
+                                <FileSignature size={20} className="text-warning" /> Industry Performance Feedback
+                            </h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {industryFeedback.map((fb, idx) => (
+                                    <div key={idx} style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                            <strong style={{ color: '#fff' }}>{fb.student?.name}</strong>
+                                            <span style={{ 
+                                                fontSize: '0.75rem', 
+                                                color: fb.sentiment === 'Positive' ? 'var(--success)' : fb.sentiment === 'Negative' ? 'var(--danger)' : 'var(--warning)',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                {fb.sentiment.toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <p style={{ fontSize: '0.9rem', marginBottom: '8px' }}>"{fb.description}"</p>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                            <span>ID: {fb.feedback_id}</span>
+                                            <span>From: {fb.industrySupervisor?.company || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Logbook History */}
+                    {logbooks.length > 0 && (
+                        <div className="glass-card">
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: 'var(--primary-color)' }}>
+                                <Clock size={20} /> Daily Logbook History
+                            </h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {logbooks.map((log, idx) => (
+                                    <div key={idx} style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', borderLeft: '3px solid var(--primary-color)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                            <strong style={{ color: '#fff' }}>{log.student?.name}</strong>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(log.date).toLocaleDateString()}</span>
+                                        </div>
+                                        <p style={{ fontSize: '0.85rem' }}>"{log.content}"</p>
                                     </div>
                                 ))}
                             </div>
