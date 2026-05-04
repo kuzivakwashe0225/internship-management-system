@@ -40,7 +40,7 @@ exports.createLogbookEntry = async (req, res) => {
 exports.getLogbookEntries = async (req, res) => {
     try {
         let filter = {};
-        
+
         if (req.user.role === 'student') {
             filter = { student: req.user._id };
         } else if (req.user.role === 'supervisor') {
@@ -56,8 +56,33 @@ exports.getLogbookEntries = async (req, res) => {
         const entries = await Logbook.find(filter)
             .populate('student', 'name email')
             .sort({ date: -1 });
-            
+
         res.json(entries);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.downloadLogbooksCSV = async (req, res) => {
+    try {
+        const entries = await Logbook.find()
+            .populate('student', 'name email')
+            .populate('internship', 'course')
+            .sort({ date: -1 });
+
+        // Generate CSV
+        let csv = 'Student Name,Email,Course,Date,Week Number,Work Done\n';
+        entries.forEach(entry => {
+            const date = new Date(entry.date).toLocaleDateString();
+            const course = entry.internship?.course || 'N/A';
+            const week = entry.weekNumber || '';
+            const content = (entry.content || '').replace(/"/g, '""').replace(/\n/g, ' ');
+            csv += `"${entry.student?.name || ''}","${entry.student?.email || ''}","${course}","${date}","${week}","${content}"\n`;
+        });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="logbooks.csv"');
+        res.send(csv);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

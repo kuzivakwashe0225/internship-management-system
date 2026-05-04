@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getMe, verifyEmail, suggestUsers } = require('../controllers/authController');
+const { register, login, getMe, verifyEmail, suggestUsers, bootstrapFirstCoordinator } = require('../controllers/authController');
 const {
     uploadStudentCV, getAvailableCandidates, selectCandidate,
     getInternships, approvePlacement, coordinatorPlaceStudent,
@@ -10,8 +10,8 @@ const { createEvaluation, getEvaluations } = require('../controllers/evaluationC
 const { createTask, getMyTasks, getAssignedTasks, submitTask, gradeTask } = require('../controllers/taskController');
 const { createComplaint, getComplaints, resolveComplaint } = require('../controllers/complaintController');
 const { createIndustryFeedback, getIndustryFeedback } = require('../controllers/industryFeedbackController');
-const { createLogbookEntry, getLogbookEntries } = require('../controllers/logbookController');
-const { createAssessment, getAssessments } = require('../controllers/assessmentController');
+const { createLogbookEntry, getLogbookEntries, downloadLogbooksCSV } = require('../controllers/logbookController');
+const { createAssessment, getAssessments, downloadAssessmentsCSV } = require('../controllers/assessmentController');
 const { createCourse, getCourses, deleteCourse } = require('../controllers/courseController');
 const { createOrganization, getOrganizations, deleteOrganization } = require('../controllers/organizationController');
 const { createApplication, getApplications, updateApplicationStatus } = require('../controllers/applicationController');
@@ -27,6 +27,7 @@ router.post('/auth/login', login);
 router.get('/auth/me', protect, getMe);
 router.post('/auth/verify', verifyEmail);
 router.get('/auth/suggest-users', suggestUsers);
+router.post('/auth/bootstrap-coordinator', bootstrapFirstCoordinator);
 
 // --- DASHBOARD/USERS ---
 // Coordinators reviewing and approving Companies
@@ -79,10 +80,12 @@ router.get('/industry-feedback', protect, getIndustryFeedback);
 // --- LOGBOOK ---
 router.post('/logbook', protect, authorize('student'), createLogbookEntry);
 router.get('/logbook', protect, getLogbookEntries);
+router.get('/logbook/download/csv', protect, authorize('coordinator'), downloadLogbooksCSV);
 
 // --- ASSESSMENTS (Site Visits) ---
 router.post('/assessments', protect, authorize('university_supervisor'), createAssessment);
 router.get('/assessments', protect, getAssessments);
+router.get('/assessments/download/csv', protect, authorize('coordinator', 'university_supervisor'), downloadAssessmentsCSV);
 
 // --- COURSES ---
 router.post('/courses', protect, authorize('coordinator'), createCourse);

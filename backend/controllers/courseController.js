@@ -14,7 +14,7 @@ exports.createCourse = async (req, res) => {
         if (error.code === 11000) {
             return res.status(400).json({ message: 'Course code already exists' });
         }
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: error.message || 'Failed to create course' });
     }
 };
 

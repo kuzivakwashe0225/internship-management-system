@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { CheckCircle, Calendar, User, FileText } from 'lucide-react';
+import { CheckCircle, Calendar, User, FileText, Download } from 'lucide-react';
 
 export default function AssessmentTab({ user }) {
     const [assessments, setAssessments] = useState([]);
-    const [formData, setFormData] = useState({ studentId: '', internshipId: '', visitDate: '', score: '', comments: '' });
+    const [formData, setFormData] = useState({ studentId: '', internshipId: '', course: '', visitDate: '', score: '', comments: '' });
     const [internships, setInternships] = useState([]);
     const [students, setStudents] = useState([]);
+    const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -20,6 +21,8 @@ export default function AssessmentTab({ user }) {
             setAssessments(resAssess.data);
 
             if (user.role === 'university_supervisor' || user.role === 'coordinator') {
+                const resCourses = await api.get('/api/courses');
+                setCourses(resCourses.data);
                 const resIntern = await api.get('/api/internships');
                 setInternships(resIntern.data);
                 const resStudents = await api.get('/api/students');
@@ -32,9 +35,26 @@ export default function AssessmentTab({ user }) {
         }
     };
 
+    const handleDownloadAssessments = async () => {
+        try {
+            const response = await api.get('/api/assessments/download/csv', {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `assessments-${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+        } catch (err) {
+            alert('Failed to download: ' + err.response?.data?.message);
+        }
+    };
+
     const handleSubmitAssessment = async (e) => {
         e.preventDefault();
-        if (!formData.studentId || !formData.internshipId || !formData.visitDate || !formData.score || !formData.comments) {
+        if (!formData.studentId || !formData.internshipId || !formData.course || !formData.visitDate || !formData.score || !formData.comments) {
             alert('All fields are required');
             return;
         }
@@ -42,12 +62,13 @@ export default function AssessmentTab({ user }) {
             await api.post('/api/assessments', {
                 studentId: formData.studentId,
                 internshipId: formData.internshipId,
+                course: formData.course,
                 visitDate: formData.visitDate,
                 score: parseInt(formData.score),
                 comments: formData.comments
             });
             alert('Assessment recorded successfully!');
-            setFormData({ studentId: '', internshipId: '', visitDate: '', score: '', comments: '' });
+            setFormData({ studentId: '', internshipId: '', course: '', visitDate: '', score: '', comments: '' });
             fetchData();
         } catch (err) {
             alert('Failed: ' + err.response?.data?.message);
@@ -74,22 +95,29 @@ export default function AssessmentTab({ user }) {
                                 </select>
                             </div>
                             <div>
+                                <label className="form-label">Course</label>
+                                <select className="input-field" required value={formData.course} onChange={e => setFormData({ ...formData, course: e.target.value })}>
+                                    <option value="">Select Course</option>
+                                    {courses.map(c => <option key={c._id} value={c.code}>{c.code} - {c.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div>
                                 <label className="form-label">Internship</label>
                                 <select className="input-field" required value={formData.internshipId} onChange={e => setFormData({ ...formData, internshipId: e.target.value })}>
                                     <option value="">Select Internship</option>
                                     {internships.filter(i => i.status === 'active').map(i => <option key={i._id} value={i._id}>{i.company}</option>)}
                                 </select>
                             </div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                             <div>
                                 <label className="form-label">Visit Date</label>
                                 <input type="date" className="input-field" required value={formData.visitDate} onChange={e => setFormData({ ...formData, visitDate: e.target.value })} />
                             </div>
-                            <div>
-                                <label className="form-label">Score (0-100)</label>
-                                <input type="number" className="input-field" min="0" max="100" required value={formData.score} onChange={e => setFormData({ ...formData, score: e.target.value })} />
-                            </div>
+                        </div>
+                        <div>
+                            <label className="form-label">Score (0-100)</label>
+                            <input type="number" className="input-field" min="0" max="100" required value={formData.score} onChange={e => setFormData({ ...formData, score: e.target.value })} />
                         </div>
                         <div>
                             <label className="form-label">Comments</label>
@@ -102,9 +130,16 @@ export default function AssessmentTab({ user }) {
 
             {/* Assessments Table */}
             <div className="glass-card">
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                    <Calendar size={20} /> Site Assessments
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <Calendar size={20} /> Site Assessments
+                    </h3>
+                    {(user.role === 'coordinator' || user.role === 'university_supervisor') && assessments.length > 0 && (
+                        <button onClick={handleDownloadAssessments} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', background: 'rgba(99, 102, 241, 0.2)', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px', cursor: 'pointer' }}>
+                            <Download size={16} /> Download CSV
+                        </button>
+                    )}
+                </div>
 
                 {assessments.length === 0 ? (
                     <p style={{ color: 'var(--text-muted)' }}>No assessments recorded yet.</p>
@@ -114,8 +149,8 @@ export default function AssessmentTab({ user }) {
                             <thead>
                                 <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
                                     <th style={{ padding: '12px', textAlign: 'left', color: 'var(--primary-color)' }}>Student</th>
+                                    <th style={{ padding: '12px', textAlign: 'left', color: 'var(--primary-color)' }}>Course</th>
                                     <th style={{ padding: '12px', textAlign: 'left', color: 'var(--primary-color)' }}>Assessed By</th>
-                                    <th style={{ padding: '12px', textAlign: 'left', color: 'var(--primary-color)' }}>Company</th>
                                     <th style={{ padding: '12px', textAlign: 'center', color: 'var(--primary-color)' }}>Score</th>
                                     <th style={{ padding: '12px', textAlign: 'left', color: 'var(--primary-color)' }}>Date</th>
                                     <th style={{ padding: '12px', textAlign: 'left', color: 'var(--primary-color)' }}>Comments</th>
@@ -125,8 +160,8 @@ export default function AssessmentTab({ user }) {
                                 {assessments.map(a => (
                                     <tr key={a._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                         <td style={{ padding: '12px', color: '#fff' }}>{a.student?.name}</td>
-                                        <td style={{ padding: '12px', color: 'var(--primary-color)' }}>{a.universitySupervisor?.name}</td>
-                                        <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{a.internship?.company}</td>
+                                        <td style={{ padding: '12px', color: 'var(--primary-color)', fontWeight: '600' }}>{a.course}</td>
+                                        <td style={{ padding: '12px', color: 'var(--text-muted)' }}>{a.universitySupervisor?.name}</td>
                                         <td style={{ padding: '12px', textAlign: 'center', color: a.score >= 75 ? 'var(--success)' : a.score >= 50 ? 'var(--warning)' : 'var(--danger)', fontWeight: 'bold' }}>
                                             {a.score}%
                                         </td>

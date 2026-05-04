@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { ShieldCheck, Link, Database, LayoutDashboard } from 'lucide-react';
+import { ShieldCheck, Link, Database, LayoutDashboard, Download } from 'lucide-react';
 
 export default function CoordinatorDashboard({ user, token }) {
     const [companies, setCompanies] = useState([]);
@@ -114,6 +114,23 @@ export default function CoordinatorDashboard({ user, token }) {
         }
     };
 
+    const handleDownloadLogbooks = async () => {
+        try {
+            const response = await api.get('/api/logbook/download/csv', {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `logbooks-${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+        } catch (err) {
+            alert('Failed to download logbooks: ' + err.response?.data?.message);
+        }
+    };
+
     const pendingCompanies = companies.filter(c => !c.isCompanyApproved);
     const pendingPlacements = internships.filter(i => i.status === 'interview_invite');
 
@@ -138,6 +155,21 @@ export default function CoordinatorDashboard({ user, token }) {
                         <h4 style={{ color: 'var(--text-muted)' }}>Total Placements</h4>
                         <h2 style={{ fontSize: '2rem' }}>{internships.length}</h2>
                     </div>
+                </div>
+            </div>
+
+            {/* Downloads Section */}
+            <div className="glass-card" style={{ marginBottom: '30px' }}>
+                <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Download size={20} /> Download Reports
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                    Export student logbooks and assessment records for record-keeping and reporting.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <button onClick={handleDownloadLogbooks} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: 'rgba(99, 102, 241, 0.2)', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>
+                        <Download size={18} /> Download All Logbooks (CSV)
+                    </button>
                 </div>
             </div>
 

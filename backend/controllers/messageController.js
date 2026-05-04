@@ -75,7 +75,9 @@ exports.sendMessage = async (req, res) => {
             content
         });
 
-        const populated = await message.populate('from', 'name').populate('to', 'name');
+        const populated = await Message.findById(message._id)
+            .populate('from', 'name')
+            .populate('to', 'name');
         res.status(201).json(populated);
     } catch (error) {
         res.status(500).json({ message: error.message });

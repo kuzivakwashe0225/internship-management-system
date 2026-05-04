@@ -105,3 +105,40 @@ exports.suggestUsers = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.bootstrapFirstCoordinator = async (req, res) => {
+    try {
+        // Check if any coordinator already exists
+        const existingCoordinator = await User.findOne({ role: 'coordinator' });
+        if (existingCoordinator) {
+            return res.status(400).json({ message: 'A coordinator already exists. Use the admin panel to add more coordinators.' });
+        }
+
+        const { name, email, password } = req.body;
+
+        // Validation
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: 'Name, email, and password are required' });
+        }
+
+        if (password.length < 8) {
+            return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+        }
+
+        // Create the first coordinator account
+        const coordinator = await User.create({
+            name,
+            email,
+            password,
+            role: 'coordinator',
+            isVerified: true
+        });
+
+        res.status(201).json({
+            message: 'First coordinator account created successfully!',
+            coordinator: { _id: coordinator._id, name: coordinator.name, email: coordinator.email, role: coordinator.role }
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
