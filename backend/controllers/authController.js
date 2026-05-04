@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const PendingUser = require('../models/PendingUser');
 const jwt = require('jsonwebtoken');
 
 const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -14,15 +15,27 @@ exports.register = async (req, res) => {
         // 2. Validation: Password length
         if (password.length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters long' });
 
-        // 3. Duplicate Email Check
+        // 3. Check if email exists in PendingUser
+        const pendingUser = await PendingUser.findOne({ email: email.toLowerCase() });
+        if (!pendingUser) return res.status(403).json({ message: 'This email is not authorized to register. Please contact your administrator.' });
+
+        // 4. Duplicate Email Check
         if (await User.findOne({ email })) return res.status(400).json({ message: 'User already exists' });
 
-        // 4. Create user - auto-verified for prototype/testing
+        // 5. Create user with data from PendingUser, merged with registration input
         const user = await User.create({
-            name, email, password, role,
-            studentId, department, company,
+            name: name || pendingUser.name,
+            email,
+            password,
+            role: role || pendingUser.role,
+            studentId,
+            department: department || pendingUser.department,
+            company,
             isVerified: true
         });
+
+        // 6. Remove from PendingUser after successful registration
+        await PendingUser.deleteOne({ _id: pendingUser._id });
 
         res.status(201).json({ message: 'Registration successful. You can now log in.' });
     } catch (error) {
@@ -73,6 +86,21 @@ exports.verifyEmail = async (req, res) => {
         await user.save();
 
         res.json({ message: 'Email verified successfully. You can now log in.' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.suggestUsers = async (req, res) => {
+    try {
+        const { query } = req.query;
+        if (!query || query.length < 1) return res.json([]);
+
+        const suggestions = await PendingUser.find({
+            name: { $regex: query, $options: 'i' }
+        }).select('name email').limit(10);
+
+        res.json(suggestions);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

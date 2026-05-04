@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getMe, verifyEmail } = require('../controllers/authController');
+const { register, login, getMe, verifyEmail, suggestUsers } = require('../controllers/authController');
 const {
     uploadStudentCV, getAvailableCandidates, selectCandidate,
     getInternships, approvePlacement, coordinatorPlaceStudent,
@@ -11,6 +11,12 @@ const { createTask, getMyTasks, getAssignedTasks, submitTask, gradeTask } = requ
 const { createComplaint, getComplaints, resolveComplaint } = require('../controllers/complaintController');
 const { createIndustryFeedback, getIndustryFeedback } = require('../controllers/industryFeedbackController');
 const { createLogbookEntry, getLogbookEntries } = require('../controllers/logbookController');
+const { createAssessment, getAssessments } = require('../controllers/assessmentController');
+const { createCourse, getCourses, deleteCourse } = require('../controllers/courseController');
+const { createOrganization, getOrganizations, deleteOrganization } = require('../controllers/organizationController');
+const { createApplication, getApplications, updateApplicationStatus } = require('../controllers/applicationController');
+const { getConversationUsers, getMessages, sendMessage, markRead, getUnreadCount } = require('../controllers/messageController');
+const { createPendingUser, getPendingUsers, deletePendingUser } = require('../controllers/pendingUserController');
 const { protect, authorize } = require('../middleware/auth');
 const { uploadCV, uploadTaskFile } = require('../middleware/upload');
 const User = require('../models/User');
@@ -20,6 +26,7 @@ router.post('/auth/register', register);
 router.post('/auth/login', login);
 router.get('/auth/me', protect, getMe);
 router.post('/auth/verify', verifyEmail);
+router.get('/auth/suggest-users', suggestUsers);
 
 // --- DASHBOARD/USERS ---
 // Coordinators reviewing and approving Companies
@@ -72,5 +79,36 @@ router.get('/industry-feedback', protect, getIndustryFeedback);
 // --- LOGBOOK ---
 router.post('/logbook', protect, authorize('student'), createLogbookEntry);
 router.get('/logbook', protect, getLogbookEntries);
+
+// --- ASSESSMENTS (Site Visits) ---
+router.post('/assessments', protect, authorize('university_supervisor'), createAssessment);
+router.get('/assessments', protect, getAssessments);
+
+// --- COURSES ---
+router.post('/courses', protect, authorize('coordinator'), createCourse);
+router.get('/courses', protect, getCourses);
+router.delete('/courses/:id', protect, authorize('coordinator'), deleteCourse);
+
+// --- ORGANIZATIONS ---
+router.post('/organizations', protect, authorize('coordinator'), createOrganization);
+router.get('/organizations', protect, getOrganizations);
+router.delete('/organizations/:id', protect, authorize('coordinator'), deleteOrganization);
+
+// --- APPLICATIONS ---
+router.post('/applications', protect, authorize('student'), createApplication);
+router.get('/applications', protect, getApplications);
+router.put('/applications/:id/status', protect, authorize('coordinator'), updateApplicationStatus);
+
+// --- MESSAGES ---
+router.get('/messages/users', protect, getConversationUsers);
+router.get('/messages/:userId', protect, getMessages);
+router.post('/messages', protect, sendMessage);
+router.put('/messages/:userId/read', protect, markRead);
+router.get('/messages/unread/count', protect, getUnreadCount);
+
+// --- PENDING USERS (Admin) ---
+router.post('/pending-users', protect, authorize('coordinator'), createPendingUser);
+router.get('/pending-users', protect, authorize('coordinator'), getPendingUsers);
+router.delete('/pending-users/:id', protect, authorize('coordinator'), deletePendingUser);
 
 module.exports = router;

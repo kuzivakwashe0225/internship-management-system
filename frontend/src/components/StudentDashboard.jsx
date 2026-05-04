@@ -18,6 +18,7 @@ export default function StudentDashboard({ user, token }) {
     // Logbook State
     const [logbooks, setLogbooks] = useState([]);
     const [logbookContent, setLogbookContent] = useState('');
+    const [logbookWeek, setLogbookWeek] = useState('');
 
     // Complaint State
     const [complaints, setComplaints] = useState([]);
@@ -62,15 +63,54 @@ export default function StudentDashboard({ user, token }) {
     const handleLogbookSubmit = async (e) => {
         e.preventDefault();
         if (!logbookContent) return alert('Please write logbook content');
+        if (!logbookWeek) return alert('Please select a week number');
+
         try {
-            await api.post('/api/logbook', { content: logbookContent });
+            await api.post('/api/logbook', { content: logbookContent, weekNumber: parseInt(logbookWeek) });
             alert('Daily logbook entry saved!');
             setLogbookContent('');
+            setLogbookWeek('');
             fetchData();
         } catch (err) {
             alert(err.response?.data?.message || 'Submission failed');
         }
     };
+
+    const handleLogbookDownload = () => {
+        if (logbooks.length === 0) {
+            alert('No logbook entries to download');
+            return;
+        }
+
+        let csvContent = 'Week,Date,Work Done\n';
+        logbooks.forEach(l => {
+            const date = new Date(l.date).toLocaleDateString();
+            const week = l.weekNumber || '-';
+            const content = (l.content || '').replace(/"/g, '""'); // Escape quotes
+            csvContent += `${week},"${date}","${content}"\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `logbook_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // Check if student already submitted logbook today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const hasSubmittedToday = logbooks.some(l => {
+        const logDate = new Date(l.date);
+        logDate.setHours(0, 0, 0, 0);
+        return logDate.getTime() === today.getTime();
+    });
 
     const handleCVUpload = async (e) => {
         e.preventDefault();
@@ -216,22 +256,59 @@ export default function StudentDashboard({ user, token }) {
                     Record your daily activities and achievements. This log is visible to your Industry and University Supervisors.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    <form onSubmit={handleLogbookSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <textarea 
-                            className="input-field" 
-                            rows="4" 
-                            placeholder="What did you do today?" 
-                            value={logbookContent}
-                            onChange={e => setLogbookContent(e.target.value)}
-                            required
-                        ></textarea>
-                        <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>Save Entry</button>
-                    </form>
+                    {hasSubmittedToday ? (
+                        <div style={{ padding: '16px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid var(--warning)', borderRadius: '8px', color: 'var(--warning)' }}>
+                            <strong>Already Submitted Today</strong>
+                            <p style={{ margin: '8px 0 0 0', fontSize: '0.9rem' }}>You've already submitted your logbook entry for today. Please come back tomorrow to submit another entry.</p>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleLogbookSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div>
+                                <label className="form-label">Week Number</label>
+                                <select className="input-field" required value={logbookWeek} onChange={e => setLogbookWeek(e.target.value)}>
+                                    <option value="">Select Week</option>
+                                    {Array.from({ length: 52 }, (_, i) => (
+                                        <option key={i + 1} value={i + 1}>Week {i + 1}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <textarea
+                                className="input-field"
+                                rows="3"
+                                placeholder="What did you do today?"
+                                value={logbookContent}
+                                onChange={e => setLogbookContent(e.target.value)}
+                                required
+                            ></textarea>
+                            <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>Save Entry</button>
+                        </form>
+                    )}
+
                     <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                        <h4 style={{ marginBottom: '12px' }}>Recent Entries</h4>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <h4 style={{ margin: 0 }}>Recent Entries</h4>
+                            {logbooks.length > 0 && (
+                                <button
+                                    onClick={handleLogbookDownload}
+                                    style={{
+                                        padding: '6px 12px',
+                                        background: 'rgba(99, 102, 241, 0.2)',
+                                        border: '1px solid var(--primary-color)',
+                                        color: 'var(--primary-color)',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    📥 Download CSV
+                                </button>
+                            )}
+                        </div>
                         {logbooks.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No logbook entries yet.</p> : (
                             logbooks.map(l => (
                                 <div key={l._id} style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', marginBottom: '8px', borderLeft: '3px solid var(--primary-color)' }}>
+                                    {l.weekNumber && <span style={{ fontSize: '0.7rem', color: 'var(--primary-color)', fontWeight: '600' }}>Week {l.weekNumber} • </span>}
                                     <p style={{ fontSize: '0.85rem', marginBottom: '4px' }}>{l.content}</p>
                                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(l.date).toLocaleString()}</span>
                                 </div>

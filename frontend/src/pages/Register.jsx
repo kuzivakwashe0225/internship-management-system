@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { UserPlus } from 'lucide-react';
@@ -8,6 +8,36 @@ export default function Register() {
     const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'student', studentId: '', department: '', company: '' });
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
+    const handleNameChange = async (value) => {
+        setFormData({ ...formData, name: value });
+
+        if (value.length < 1) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        try {
+            const res = await api.get(`/api/auth/suggest-users?query=${value}`);
+            setSuggestions(res.data);
+            setShowSuggestions(true);
+        } catch (err) {
+            console.error('Failed to fetch suggestions:', err);
+        }
+    };
+
+    const handleSelectSuggestion = (suggestion) => {
+        setFormData({
+            ...formData,
+            name: suggestion.name,
+            email: suggestion.email
+        });
+        setSuggestions([]);
+        setShowSuggestions(false);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -50,9 +80,56 @@ export default function Register() {
                                 <option value="coordinator">University Coordinator</option>
                             </select>
                         </div>
-                        <div className="form-group">
+                        <div className="form-group" style={{ position: 'relative' }}>
                             <label className="form-label">Full Name</label>
-                            <input type="text" className="input-field" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                            <input
+                                type="text"
+                                className="input-field"
+                                required
+                                value={formData.name}
+                                onChange={(e) => handleNameChange(e.target.value)}
+                                placeholder="Start typing your name..."
+                            />
+                            {showSuggestions && suggestions.length > 0 && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    right: 0,
+                                    background: 'rgba(30, 30, 50, 0.95)',
+                                    border: '1px solid var(--border-light)',
+                                    borderTop: 'none',
+                                    borderRadius: '0 0 8px 8px',
+                                    zIndex: 10,
+                                    maxHeight: '200px',
+                                    overflowY: 'auto'
+                                }}>
+                                    {suggestions.map((suggestion) => (
+                                        <button
+                                            key={suggestion._id}
+                                            type="button"
+                                            onClick={() => handleSelectSuggestion(suggestion)}
+                                            style={{
+                                                display: 'block',
+                                                width: '100%',
+                                                padding: '10px 12px',
+                                                background: 'transparent',
+                                                border: 'none',
+                                                color: '#fff',
+                                                textAlign: 'left',
+                                                cursor: 'pointer',
+                                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                                transition: 'background 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => e.target.style.background = 'rgba(99, 102, 241, 0.2)'}
+                                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                                        >
+                                            <div style={{ fontSize: '0.9rem' }}>{suggestion.name}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{suggestion.email}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="form-group">
                             <label className="form-label">Email</label>

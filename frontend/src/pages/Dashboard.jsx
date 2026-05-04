@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Home, FileText, Briefcase } from 'lucide-react';
+import { LogOut, Home, FileText, Briefcase, Mail, Settings } from 'lucide-react';
 import api from '../api';
 
 // Import our new advanced Role components
@@ -9,6 +9,10 @@ import IndustryDashboard from '../components/IndustryDashboard';
 import UniversitySupervisorDashboard from '../components/UniversitySupervisorDashboard';
 import CoordinatorDashboard from '../components/CoordinatorDashboard';
 import Records from '../components/Records';
+import AssessmentTab from '../components/AssessmentTab';
+import AdminDashboard from '../components/AdminDashboard';
+import MessagingPanel from '../components/MessagingPanel';
+import ApplicationsPanel from '../components/ApplicationsPanel';
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -72,6 +76,34 @@ export default function Dashboard() {
                     <Home size={20} /> Dashboard
                 </button>
                 <button
+                    className={`nav-item ${activeTab === 'assessments' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('assessments')}
+                >
+                    <FileText size={20} /> Assessments
+                </button>
+                {(user.role === 'student' || user.role === 'coordinator') && (
+                    <button
+                        className={`nav-item ${activeTab === 'applications' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('applications')}
+                    >
+                        <Briefcase size={20} /> Applications
+                    </button>
+                )}
+                <button
+                    className={`nav-item ${activeTab === 'messages' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('messages')}
+                >
+                    <FileText size={20} /> Messages
+                </button>
+                {user.role === 'coordinator' && (
+                    <button
+                        className={`nav-item ${activeTab === 'admin' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('admin')}
+                    >
+                        <FileText size={20} /> Admin
+                    </button>
+                )}
+                <button
                     className={`nav-item ${activeTab === 'records' ? 'active' : ''}`}
                     onClick={() => setActiveTab('records')}
                 >
@@ -92,7 +124,12 @@ export default function Dashboard() {
                 </div>
 
                 {/* Inject Advanced Component */}
-                {activeTab === 'dashboard' ? renderDashboardContent() : <Records user={user} />}
+                {activeTab === 'dashboard' && renderDashboardContent()}
+                {activeTab === 'assessments' && <AssessmentTab user={user} />}
+                {activeTab === 'applications' && <ApplicationsPanel user={user} />}
+                {activeTab === 'messages' && <MessagingPanel user={user} />}
+                {activeTab === 'admin' && <AdminDashboard />}
+                {activeTab === 'records' && <Records user={user} />}
             </div>
         </div>
     );
