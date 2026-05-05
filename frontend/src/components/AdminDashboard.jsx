@@ -6,9 +6,11 @@ export default function AdminDashboard() {
     const [tab, setTab] = useState('courses');
     const [courses, setCourses] = useState([]);
     const [organizations, setOrganizations] = useState([]);
+    const [departments, setDepartments] = useState([]);
     const [pendingUsers, setPendingUsers] = useState([]);
     const [courseForm, setCourseForm] = useState({ code: '', name: '', department: '' });
     const [orgForm, setOrgForm] = useState({ name: '', address: '', contactPerson: '', email: '', industry: '' });
+    const [departmentForm, setDepartmentForm] = useState({ name: '', code: '', description: '' });
     const [userForm, setUserForm] = useState({ name: '', email: '', role: 'university_supervisor', department: '' });
 
     useEffect(() => {
@@ -21,6 +23,8 @@ export default function AdminDashboard() {
             setCourses(resCourses.data);
             const resOrgs = await api.get('/api/organizations');
             setOrganizations(resOrgs.data);
+            const resDepts = await api.get('/api/departments');
+            setDepartments(resDepts.data);
             const resPendingUsers = await api.get('/api/pending-users');
             setPendingUsers(resPendingUsers.data);
         } catch (err) {
@@ -102,10 +106,33 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleAddDepartment = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/api/departments', departmentForm);
+            alert('Department added successfully!');
+            setDepartmentForm({ name: '', code: '', description: '' });
+            fetchData();
+        } catch (err) {
+            alert('Failed: ' + err.response?.data?.message);
+        }
+    };
+
+    const handleDeleteDepartment = async (id) => {
+        if (window.confirm('Delete this department?')) {
+            try {
+                await api.delete(`/api/departments/${id}`);
+                fetchData();
+            } catch (err) {
+                alert('Failed: ' + err.response?.data?.message);
+            }
+        }
+    };
+
     return (
         <div>
             <div className="glass-card" style={{ marginBottom: '30px', display: 'flex', gap: '8px', borderBottom: '2px solid var(--border-light)' }}>
-                {['courses', 'organizations', 'users'].map(t => (
+                {['courses', 'departments', 'organizations', 'users'].map(t => (
                     <button
                         key={t}
                         onClick={() => setTab(t)}
@@ -151,6 +178,40 @@ export default function AdminDashboard() {
                                         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>{c.department}</p>
                                     </div>
                                     <button onClick={() => handleDeleteCourse(c._id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px' }}>
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Departments Tab */}
+            {tab === 'departments' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                    <div className="glass-card">
+                        <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Plus size={20} /> Add Department
+                        </h3>
+                        <form onSubmit={handleAddDepartment} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <input type="text" className="input-field" placeholder="Department Name" required value={departmentForm.name} onChange={e => setDepartmentForm({ ...departmentForm, name: e.target.value })} />
+                            <input type="text" className="input-field" placeholder="Department Code" required value={departmentForm.code} onChange={e => setDepartmentForm({ ...departmentForm, code: e.target.value })} />
+                            <textarea className="input-field" rows="3" placeholder="Description (optional)" value={departmentForm.description} onChange={e => setDepartmentForm({ ...departmentForm, description: e.target.value })}></textarea>
+                            <button type="submit" className="btn-primary">Add Department</button>
+                        </form>
+                    </div>
+
+                    <div className="glass-card">
+                        <h3 style={{ marginBottom: '16px' }}>Departments List</h3>
+                        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                            {departments.map(d => (
+                                <div key={d._id} style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <strong>{d.code}</strong> <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{d.name}</span>
+                                        {d.description && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>{d.description}</p>}
+                                    </div>
+                                    <button onClick={() => handleDeleteDepartment(d._id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px' }}>
                                         <Trash2 size={16} />
                                     </button>
                                 </div>

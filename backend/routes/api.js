@@ -17,6 +17,7 @@ const { createOrganization, getOrganizations, deleteOrganization } = require('..
 const { createApplication, getApplications, updateApplicationStatus } = require('../controllers/applicationController');
 const { getConversationUsers, getMessages, sendMessage, markRead, getUnreadCount } = require('../controllers/messageController');
 const { createPendingUser, getPendingUsers, deletePendingUser } = require('../controllers/pendingUserController');
+const { createDepartment, getDepartments, deleteDepartment } = require('../controllers/departmentController');
 const { protect, authorize } = require('../middleware/auth');
 const { uploadCV, uploadTaskFile } = require('../middleware/upload');
 const User = require('../models/User');
@@ -113,5 +114,10 @@ router.get('/messages/unread/count', protect, getUnreadCount);
 router.post('/pending-users', protect, authorize('coordinator'), createPendingUser);
 router.get('/pending-users', protect, authorize('coordinator'), getPendingUsers);
 router.delete('/pending-users/:id', protect, authorize('coordinator'), deletePendingUser);
+
+// --- DEPARTMENTS (Admin) ---
+router.post('/departments', protect, authorize('coordinator'), createDepartment);
+router.get('/departments', protect, getDepartments);
+router.delete('/departments/:id', protect, authorize('coordinator'), deleteDepartment);
 
 module.exports = router;

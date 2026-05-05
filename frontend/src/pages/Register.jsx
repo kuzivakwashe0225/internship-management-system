@@ -10,6 +10,19 @@ export default function Register() {
     const [successMsg, setSuccessMsg] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [departments, setDepartments] = useState([]);
+
+    useEffect(() => {
+        const fetchDepartments = async () => {
+            try {
+                const res = await api.get('/api/departments');
+                setDepartments(res.data);
+            } catch (err) {
+                console.error('Failed to fetch departments:', err);
+            }
+        };
+        fetchDepartments();
+    }, []);
 
     const handleNameChange = async (value) => {
         setFormData({ ...formData, name: value });
@@ -152,7 +165,12 @@ export default function Register() {
                         {(formData.role === 'student' || formData.role === 'coordinator' || formData.role === 'university_supervisor') && (
                             <div className="form-group">
                                 <label className="form-label">Department / Faculty</label>
-                                <input type="text" className="input-field" required value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} />
+                                <select className="input-field" required value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })}>
+                                    <option value="">-- Select a Department --</option>
+                                    {departments.map(d => (
+                                        <option key={d._id} value={d.name}>{d.code} - {d.name}</option>
+                                    ))}
+                                </select>
                             </div>
                         )}
 
